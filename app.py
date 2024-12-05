@@ -1,9 +1,11 @@
 from flask import Flask, jsonify, request, Response
+# from embeddings import generate_prompt_embedding, select_relevant_insights
 import openai
 import os
 import logging
 import json
 from langchain_openai import ChatOpenAI
+from langchain_core.prompts import PromptTemplate
 
 app = Flask(__name__)
 
@@ -20,13 +22,12 @@ def generate_insights():
         return jsonify({'message': 'OPENAI_API_KEY environment variable is not set.'}), 500
     
     data = request.get_json()
-    logging.debug(f"Received data: {data}")
-
     # Validate input
     prompt = data.get("prompt")
     insights = data.get("insights")
     if not prompt or not isinstance(insights, list):
         return jsonify({"error": "Invalid input: 'prompt' must be a string and 'insights' must be a list"}), 400
+
 
     try:
         # Initialize OpenAI model
@@ -38,6 +39,7 @@ def generate_insights():
             f"- ID: {insight['id']}\n  Summary: {insight['summary']}\n  Description: {insight['description']}"
             for insight in insights
         )
+        logging.debug("Starting insights_text ",insights_text)
         combined_input = f"Relevant Insights:\n{insights_text}\n\nPrompt:\n{prompt}"
 
         # Define your prompt template
@@ -64,26 +66,31 @@ Output:
 
         # Format the template
         formatted_prompt = template.format(insights=insights_text, prompt=prompt)
+        logging.debug(f"Formatted prompt: {formatted_prompt}")
+
 
         # Send the prompt to the OpenAI model
         response = llm(formatted_prompt)
         logging.debug(f"Raw model response: {response}")
 
-        # Extract response content
+        # Parse the response question as JSON
         try:
-            response_text = response['choices'][0]['message']['content']  # This is where the output is typically stored
-            logging.debug(f"Response Text: {response_text}")
+            response_json = json.loads(response)
             
-            # Parse the response as JSON
-            response_json = json.loads(response_text)
+            # Extract 'Insights' from the JSON response
             insights = response_json.get('Insights', [])
             if not insights:
-                return jsonify({"message": "There is no insight found. Please send a different question."}), 200
+                # If no insights are found, return a message
+                insights_json = json.dumps({"message": "There is no insight found. Please send a different question."})
             else:
-                return jsonify({"Insights": insights}), 200
-        except json.JSONDecodeError as e:
-            logging.error(f"Error parsing response as JSON: {e}")
-            return jsonify({"message": "Error parsing response from OpenAI API."}), 500
+                # Return the insights along with the IDs as a JSON response
+                insights_json = json.dumps({"Insights": insights}, indent=2)
+
+        except json.JSONDecodeError:
+            insights_json = json.dumps({"message": "Error parsing response as JSON."})
+
+        # Return the insights as a JSON response
+        return Response(insights_json, mimetype='application/json')
 
     except Exception as e:
         if "insufficient_quota" in str(e):
@@ -91,7 +98,6 @@ Output:
             return jsonify({'message': 'Quota exceeded. Please check your OpenAI plan and billing details.'}), 429
         logging.error(f"Error processing question: {e}")
         return jsonify({'message': 'Error processing question'}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True)
