@@ -1,5 +1,5 @@
 flask
-openai==0.27.0
+openai
 numpy
 gunicorn
 blinker==1.8.2
