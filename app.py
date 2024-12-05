@@ -65,7 +65,7 @@ Output:
 """
 
         logging.debug("Before formatting the prompt.")
-        formatted_prompt = template.format(insights=insights_text, prompt=prompt)
+        formatted_prompt = template.format(insights=json.dumps(insights), prompt=prompt)
         logging.debug("After formatting the prompt.")
         logging.debug(f"Formatted prompt: {formatted_prompt}")
 
