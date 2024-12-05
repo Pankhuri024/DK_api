@@ -1,18 +1,15 @@
 from flask import Flask, jsonify, request, Response
-# from embeddings import generate_prompt_embedding, select_relevant_insights
 import openai
 import os
 import logging
 import json
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import PromptTemplate
 
 app = Flask(__name__)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
-@app.route('/generate-insights', methods=['POST'])
 @app.route('/generate-insights', methods=['POST'])
 def generate_insights():
     logging.debug("Starting generate_insights function.")
@@ -72,9 +69,13 @@ Output:
         response = llm(formatted_prompt)
         logging.debug(f"Raw model response: {response}")
 
-        # Parse the response as JSON
+        # Extract response content
         try:
-            response_json = json.loads(response)  # assuming response is JSON formatted
+            response_text = response['choices'][0]['message']['content']  # This is where the output is typically stored
+            logging.debug(f"Response Text: {response_text}")
+            
+            # Parse the response as JSON
+            response_json = json.loads(response_text)
             insights = response_json.get('Insights', [])
             if not insights:
                 return jsonify({"message": "There is no insight found. Please send a different question."}), 200
