@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, Response
+# from embeddings import generate_prompt_embedding, select_relevant_insights
 import openai
 import os
 import logging
@@ -27,6 +28,7 @@ def generate_insights():
     if not prompt or not isinstance(insights, list):
         return jsonify({"error": "Invalid input: 'prompt' must be a string and 'insights' must be a list"}), 400
 
+    
     try:
         # Initialize OpenAI model
         selected_model = 'gpt-3.5-turbo'  # Example model, adjust as needed
@@ -37,7 +39,7 @@ def generate_insights():
             f"- ID: {insight['id']}\n  Summary: {insight['summary']}\n  Description: {insight['description']}"
             for insight in insights
         )
-        logging.debug(f"Insights text: {insights_text}")
+        logging.debug(f"Starting insights_text: {insights_text}")
         combined_input = f"Relevant Insights:\n{insights_text}\n\nPrompt:\n{prompt}"
 
         # Define your prompt template
@@ -62,9 +64,12 @@ Prompt:
 Output:
 """
 
-        # Format the template
+        logging.debug("Before formatting the prompt.")
         formatted_prompt = template.format(insights=insights_text, prompt=prompt)
+        logging.debug("After formatting the prompt.")
         logging.debug(f"Formatted prompt: {formatted_prompt}")
+
+
 
         # Send the prompt to the OpenAI model
         response = llm(formatted_prompt)
