@@ -33,31 +33,25 @@ def generate_insights():
         selected_model = 'gpt-3.5-turbo'  # Example model, adjust as needed
         llm = ChatOpenAI(model=selected_model, api_key=OPENAI_API_KEY)
         
-        # Generate embeddings for the insights (you should have precomputed them and sent them)
-        insights_embeddings = [{"id": insight['id'], "text": insight['text'], "embedding": insight['embedding']} for insight in insights]
-       
-        combined_input = f"Relevant Insights:\n{insights}\n\nPrompt:\n{prompt}"
+        # Create a formatted input based on 'summary' and 'description'
+        insights_text = "\n".join(
+            f"- ID: {insight['id']}\n  Summary: {insight['summary']}\n  Description: {insight['description']}"
+            for insight in insights
+        )
+        combined_input = f"Relevant Insights:\n{insights_text}\n\nPrompt:\n{prompt}"
 
-        # Define your template with Insight IDs
+        # Define your prompt template
         template = """
-Analyze the content of the provided question,the provided insights and generate insights based on the provided insights. Include a summary (200 characters) and a detailed description (1500 characters) for each insight. Each insight should also include the ID of the insight it was generated from. Format your response as a JSON object without a 'json' heading, with each insight structured as follows:
-
-- Insight1:
-  - ID: Insight ID here
-  - Summary: Insight summary here
-  - Description: Detailed insight description here
-- Insight2:
-  - ID: Insight ID here
-  - Summary: Insight summary here
-  - Description: Detailed insight description here
+Analyze the content of the provided question and insights, and generate new insights based on them.
+Each insight should include:
+- ID: The ID of the original insight
+- Summary: A short summary of the new insight (max 200 characters)
+- Description: A detailed description of the new insight (max 1500 characters)
 
 Instructions:
-1. Base your response solely on the content within the provided question and insights.
-2. Do not introduce new elements or information not present in the provided question or insights.
-3. If there is no insight, generate the response without JSON header with the message: "Message": "There is no insight found. Please send a different question."
-4. Ensure the response does not mention ChatGPT or OpenAI.
-5. All insights should be in an array of objects labeled "Insights". Each insight should be labeled as Insight1, Insight2, etc., with the respective "ID", "Summary", and "Description" fields.
-6. If a specific number of insights is mentioned in the question, generate that exact number of insights; otherwise, generate insights as appropriate.
+1. Use the provided question and insights to generate insights.
+2. If no relevant insights are found, respond with: {"message": "There is no insight found. Please send a different question."}
+3. Format your response as a JSON object with an array of new insights labeled "Insights".
 
 Provided Insights:
 {insights}
@@ -68,11 +62,11 @@ Prompt:
 Output:
 """
 
-        # Construct the prompt using the template and input data
-        prompt = template.format(insights=json.dumps(insights), prompt=prompt)
+        # Format the template
+        formatted_prompt = template.format(insights=insights_text, prompt=prompt)
 
-        # Send the prompt to the model
-        response = llm(prompt)
+        # Send the prompt to the OpenAI model
+        response = llm(formatted_prompt)
         logging.debug(f"Raw model response: {response}")
 
         # Parse the response question as JSON
