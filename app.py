@@ -13,6 +13,7 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
 
 @app.route('/generate-insights', methods=['POST'])
+@app.route('/generate-insights', methods=['POST'])
 def generate_insights():
     logging.debug("Starting generate_insights function.")
 
@@ -22,11 +23,13 @@ def generate_insights():
         return jsonify({'message': 'OPENAI_API_KEY environment variable is not set.'}), 500
     
     data = request.get_json()
+    logging.debug(f"Received data: {data}")
+
     # Validate input
     prompt = data.get("prompt")
     insights = data.get("insights")
-    if not prompt or not insights:
-        return jsonify({"error": "Missing 'prompt' or 'insights'"}), 400
+    if not prompt or not isinstance(insights, list):
+        return jsonify({"error": "Invalid input: 'prompt' must be a string and 'insights' must be a list"}), 400
 
     try:
         # Initialize OpenAI model
@@ -69,24 +72,17 @@ Output:
         response = llm(formatted_prompt)
         logging.debug(f"Raw model response: {response}")
 
-        # Parse the response question as JSON
+        # Parse the response as JSON
         try:
-            response_json = json.loads(response.content)
-            
-            # Extract 'Insights' from the JSON response
+            response_json = json.loads(response)  # assuming response is JSON formatted
             insights = response_json.get('Insights', [])
             if not insights:
-                # If no insights are found, return a message
-                insights_json = json.dumps({"message": "There is no insight found. Please send a different question."})
+                return jsonify({"message": "There is no insight found. Please send a different question."}), 200
             else:
-                # Return the insights along with the IDs as a JSON response
-                insights_json = json.dumps({"Insights": insights}, indent=2)
-
-        except json.JSONDecodeError:
-            insights_json = json.dumps({"message": "Error parsing response as JSON."})
-
-        # Return the insights as a JSON response
-        return Response(insights_json, mimetype='application/json')
+                return jsonify({"Insights": insights}), 200
+        except json.JSONDecodeError as e:
+            logging.error(f"Error parsing response as JSON: {e}")
+            return jsonify({"message": "Error parsing response from OpenAI API."}), 500
 
     except Exception as e:
         if "insufficient_quota" in str(e):
@@ -94,6 +90,7 @@ Output:
             return jsonify({'message': 'Quota exceeded. Please check your OpenAI plan and billing details.'}), 429
         logging.error(f"Error processing question: {e}")
         return jsonify({'message': 'Error processing question'}), 500
+
 
 if __name__ == "__main__":
     app.run(debug=True)
