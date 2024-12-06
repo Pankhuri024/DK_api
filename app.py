@@ -126,7 +126,8 @@ def generate_prompt(question, insights):
       - Description: A detailed description (max 1500 characters).
       - Source_Insights: List of IDs of the existing insights that were used to generate this new insight.
     - If the insights are related to multiple existing insights, mention how they work together to answer the user's question.
-    - The insights should be structured in such a way that they are answering the user's query directly and clearly. 
+    - The insights should be structured in such a way that they are answering the user's query directly and clearly.
+    - Ensure the response contains only one top-level 'Insights' field with the insights directly listed inside it, without additional nesting of 'Insights' inside 'Insights'.
     - If no relevant insights can be generated, you should inform the user that no new insights were found.
     """
     return prompt
