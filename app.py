@@ -103,14 +103,18 @@ def generate_prompt(question, insights):
     prompt = f"""
      You are an AI that analyzes user questions and existing insights to generate new insights. 
     Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', 'Source_Insights', and 'Relation_To_Question', with each insight structured as follows and based on the provided input:
-    - Insight1:
+    - Insights:
+      - ID: 1
       - Summary: Insight summary here
       - Description: Detailed insight description here
       - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
-    - Insight2:
+      - Relation_to_question : How it relates to question
+    
+      - ID: 2
       - Summary: Insight summary here
       - Description: Detailed insight description here
       - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
+      - Relation_to_question : How it relates to question
       
 
     Question: "{question}"
@@ -127,8 +131,7 @@ def generate_prompt(question, insights):
       - Source_Insights: List of IDs of the existing insights that were used to generate this new insight.
     - If the insights are related to multiple existing insights, mention how they work together to answer the user's question.
     - The insights should be structured in such a way that they are answering the user's query directly and clearly.
-    - All insights should be within a array of object labeled Insights. Inside this single object, each insight should be labeled as Insight1, Insight2, etc., with its respective Summary, Description, Source_Insights, Relation_to_question.
-    - Ensure the response contains only one top-level 'Insights' field with the insights directly listed inside it, without additional nesting of 'Insights' inside 'Insights'.
+    - Ensure the response contains only one top-level 'Insights' field, which directly lists all generated insights inside it as an array.
     - If no relevant insights can be generated, you should inform the user that no new insights were found.
     """
     return prompt
