@@ -71,9 +71,14 @@ def generate_insights():
             if "Insights" in response_json:
                 insights = response_json["Insights"]
 
-                if isinstance(insights, dict) and "Insights" in insights:
-                    # Flatten nested "Insights"
-                    response_json["Insights"] = insights["Insights"]
+                if isinstance(insights, dict):
+                    # Check for nested "Insights" or "insights"
+                    if "Insights" in insights:
+                        # Flatten nested "Insights"
+                        response_json["Insights"] = insights["Insights"]
+                    elif "insights" in insights:
+                        # Flatten nested "insights" (lowercase)
+                        response_json["Insights"] = insights["insights"]
 
             # Return the response_json directly
             return jsonify({"Insights": response_json}), 200
