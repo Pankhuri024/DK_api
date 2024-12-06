@@ -67,13 +67,15 @@ def generate_insights():
         # Parse the response text as JSON
         try:
             response_json = json.loads(response_text)
-            # Check if nested "Insights" exists
-            if "Insights" in response_json and isinstance(response_json["Insights"], dict):
-                if "Insights" in response_json["Insights"]:
-                    # Remove one level of nesting
-                    response_json["Insights"] = response_json["Insights"]["Insights"]
+            # Handle different structures of "Insights"
+            if "Insights" in response_json:
+                insights = response_json["Insights"]
 
-                # Return the response_json directly
+                if isinstance(insights, dict) and "Insights" in insights:
+                    # Flatten nested "Insights"
+                    response_json["Insights"] = insights["Insights"]
+
+            # Return the response_json directly
             return jsonify({"Insights": response_json}), 200
 
         except json.JSONDecodeError:
