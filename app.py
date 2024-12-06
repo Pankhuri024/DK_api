@@ -92,7 +92,7 @@ def generate_prompt(question, insights):
     """
     prompt = f"""
     You are an AI that analyzes user questions and existing insights to generate new insights. 
-    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', and 'Description'.
+    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', and 'Source_Insights'. The response should follow the specified syntax.
 
     Question: "{question}"
 
@@ -101,11 +101,11 @@ def generate_prompt(question, insights):
 
     - Follow this syntax for the generated insights:
       "Insights":[
-        {
+        {{
           "Summary": "<Summary of the insight>",
           "Description": "<Detailed description of the insight>",
           "Source_Insights": <List of IDs from the existing insights that are relevant to this new insight>
-        },
+        }},
         ...
       ]
     - Analyze the content of the provided question and insights.
@@ -114,9 +114,11 @@ def generate_prompt(question, insights):
       - ID: The ID of the original insight.
       - Summary: A short summary (max 200 characters).
       - Description: A detailed description (max 1500 characters).
+      - Source_Insights: A list of IDs from the existing insights that are used to derive the new insight (can be empty if not applicable).
     - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}
     """
     return prompt
+
 
 
 
