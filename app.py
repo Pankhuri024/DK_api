@@ -102,7 +102,16 @@ def generate_prompt(question, insights):
     """
     prompt = f"""
      You are an AI that analyzes user questions and existing insights to generate new insights. 
-    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', 'Source_Insights', and 'Relation_To_Question'.
+    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', 'Source_Insights', and 'Relation_To_Question', with each insight structured as follows and based on the provided input:
+    - Insight1:
+      - Summary: Insight summary here
+      - Description: Detailed insight description here
+      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
+    - Insight2:
+      - Summary: Insight summary here
+      - Description: Detailed insight description here
+      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
+      
 
     Question: "{question}"
 
