@@ -1,105 +1,116 @@
 from flask import Flask, jsonify, request, Response
-# from embeddings import generate_prompt_embedding, select_relevant_insights
-import openai
-import os
 import logging
+import os
+import openai
 import json
+from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import PromptTemplate
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
 
+# OpenAI API Key from environment variable
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    logging.error("OPENAI_API_KEY environment variable is not set.")
+    raise EnvironmentError("OPENAI_API_KEY environment variable is required.")
+
+openai.api_key = OPENAI_API_KEY
+
+
 @app.route('/generate-insights', methods=['POST'])
 def generate_insights():
+    """
+    Endpoint to generate new insights based on a user-provided question and existing insights.
+    """
     logging.debug("Starting generate_insights function.")
 
-    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-    if not OPENAI_API_KEY:
-        logging.error("OPENAI_API_KEY environment variable is not set.")
-        return jsonify({'message': 'OPENAI_API_KEY environment variable is not set.'}), 500
-    
-    data = request.get_json()
-    # Validate input
-    prompt = data.get("prompt")
-    insights = data.get("insights")
-    if not prompt or not isinstance(insights, list):
-        return jsonify({"error": "Invalid input: 'prompt' must be a string and 'insights' must be a list"}), 400
+    # Parse request data
+    try:
+        data = request.get_json()
+        question = data.get("question")
+        insights = data.get("insights")
+        
+        if not question or not insights:
+            logging.error("Missing required fields: 'question' and 'insights'.")
+            return jsonify({"message": "Missing 'question' or 'insights' in the request body."}), 400
 
-    
+        logging.debug(f"Received question: {question}")
+        logging.debug(f"Received insights: {insights}")
+
+    except Exception as e:
+        logging.error(f"Error parsing request data: {e}")
+        return jsonify({"message": "Invalid request format. Ensure the JSON is structured correctly."}), 400
+
+    # Prepare prompt for OpenAI
+    formatted_prompt = generate_prompt(question, insights)
+    logging.debug(f"Formatted prompt: {formatted_prompt}")
+
     try:
         # Initialize OpenAI model
         selected_model = 'gpt-3.5-turbo'  # Example model, adjust as needed
         llm = ChatOpenAI(model=selected_model, api_key=OPENAI_API_KEY)
-        
-        # Create a formatted input based on 'summary' and 'description'
-        insights_text = "\n".join(
-            f"- ID: {insight['id']}\n  Summary: {insight['summary']}\n  Description: {insight['description']}"
-            for insight in insights
-        )
-        logging.debug(f"Starting insights_text: {insights_text}")
-        combined_input = f"Relevant Insights:\n{insights_text}\n\nPrompt:\n{prompt}"
-
-        # Define your prompt template
-        template = """
-Analyze the content of the provided prompt and insights, and generate new insights based on them.
-Each insight should include:
-- ID: The ID of the original insight
-- Summary: A short summary of the new insight (max 200 characters)
-- Description: A detailed description of the new insight (max 1500 characters)
-
-Instructions:
-1. Use the provided prompt and insights to generate insights.
-2. If no relevant insights are found, respond with: {"message": "There is no insight found. Please send a different prompt."}
-3. Format your response as a JSON object with an array of new insights labeled "Insights".
-
-Provided Insights:
-{insights}
-
-Prompt:
-{prompt}
-
-Output:
-"""
-
-        logging.debug("Before formatting the prompt.")
-        formatted_prompt = template.format(insights=json.dumps(insights), prompt=prompt)
-        logging.debug("After formatting the prompt.")
-        logging.debug(f"Formatted prompt: {formatted_prompt}")
-
-
-
-        # Send the prompt to the OpenAI model
         response = llm(formatted_prompt)
         logging.debug(f"Raw model response: {response}")
 
-        # Parse the response prompt as JSON
+        # Access the generated content properly
+        response_text = response.content.strip()  # This should be the correct attribute
+        logging.debug(f"Generated text: {response_text}")
+
+        # Parse the response text as JSON
         try:
-            response_json = json.loads(response)
-            
-            # Extract 'Insights' from the JSON response
-            insights = response_json.get('Insights', [])
-            if not insights:
-                # If no insights are found, return a message
-                insights_json = json.dumps({"message": "There is no insight found. Please send a different prompt."})
-            else:
-                # Return the insights along with the IDs as a JSON response
-                insights_json = json.dumps({"Insights": insights}, indent=2)
+            response_json = json.loads(response_text)
+            new_insights = response_json
+
+            if not new_insights:
+                logging.info("No relevant insights found.")
+                return jsonify({"message": "There is no insight found. Please send a different prompt."}), 200
+
+            return jsonify({"Insights": new_insights}), 200
 
         except json.JSONDecodeError:
-            insights_json = json.dumps({"message": "Error parsing response as JSON."})
-
-        # Return the insights as a JSON response
-        return Response(insights_json, mimetype='application/json')
+            logging.error("Error parsing generated text as JSON.")
+            return jsonify({"message": "Error parsing response as JSON."}), 500
 
     except Exception as e:
+        logging.error(f"Error processing the prompt: {e}")
         if "insufficient_quota" in str(e):
-            logging.error("Quota exceeded: Please check your OpenAI plan and billing details.")
-            return jsonify({'message': 'Quota exceeded. Please check your OpenAI plan and billing details.'}), 429
-        logging.error(f"Error processing prompt: {e}")
-        return jsonify({'message': 'Error processing prompt'}), 500
+            return jsonify({"message": "Quota exceeded. Please check your OpenAI plan and billing details."}), 429
+        return jsonify({"message": "Error processing the prompt."}), 500
+
+
+def generate_prompt(question, insights):
+    """
+    Generates a structured prompt for OpenAI based on the user question and provided insights.
+    """
+    prompt = f"""
+    You are an AI that analyzes user questions and existing insights to generate new insights. 
+    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', and 'Description'.
+
+    Question: "{question}"
+
+    Existing Insights:
+    {json.dumps(insights, indent=2)}
+
+    Instructions:
+    - Analyze the content of the provided question and insights.
+    - Use the insights to create new insights relevant to the question.
+    - Each new insight must include:
+      - ID: The ID of the original insight.
+      - Summary: A short summary (max 200 characters).
+      - Description: A detailed description (max 1500 characters).
+    - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}
+    """
+    return prompt
+
+
 
 if __name__ == "__main__":
     app.run(debug=True)
