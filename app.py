@@ -67,13 +67,16 @@ def generate_insights():
         # Parse the response text as JSON
         try:
             response_json = json.loads(response_text)
-            new_insights = response_json
+            if "Insights" in response_json and isinstance(response_json["Insights"], dict):
+            if "Insights" in response_json["Insights"]:
+                # Flatten nested Insights
+                response_json["Insights"] = response_json["Insights"]["Insights"]
 
-            if not new_insights:
+            if not response_json:
                 logging.info("No relevant insights found.")
                 return jsonify({"message": "There is no insight found. Please send a different prompt."}), 200
 
-            return jsonify({"Insights": new_insights}), 200
+            return jsonify({"Insights": response_json}), 200
 
         except json.JSONDecodeError:
             logging.error("Error parsing generated text as JSON.")
