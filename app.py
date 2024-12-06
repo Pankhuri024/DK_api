@@ -74,9 +74,11 @@ def generate_insights():
                 if isinstance(insights, dict):
                     # Check for nested "Insights" or "insights"
                     if "Insights" in insights:
+                        logging.debug(f"Generated text2")
                         # Flatten nested "Insights"
                         response_json["Insights"] = insights["Insights"]
                     elif "insights" in insights:
+                        logging.debug(f"Generated text")
                         # Flatten nested "insights" (lowercase)
                         response_json["Insights"] = insights["insights"]
 
