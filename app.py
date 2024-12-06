@@ -67,23 +67,13 @@ def generate_insights():
         # Parse the response text as JSON
         try:
             response_json = json.loads(response_text)
-            # Handle different structures of "Insights"
-            if "Insights" in response_json:
-                insights = response_json["Insights"]
+            new_insights = response_json.get('Insights', [])
 
-                if isinstance(insights, dict):
-                    # Check for nested "Insights" or "insights"
-                    if "Insights" in insights:
-                        logging.debug(f"Generated text2")
-                        # Flatten nested "Insights"
-                        response_json["Insights"] = insights["Insights"]
-                    elif "insights" in insights:
-                        logging.debug(f"Generated text")
-                        # Flatten nested "insights" (lowercase)
-                        response_json["Insights"] = insights["insights"]
+            if not new_insights:
+                logging.info("No relevant insights found.")
+                return jsonify({"message": "There is no insight found. Please send a different prompt."}), 200
 
-            # Return the response_json directly
-            return jsonify({"Insights": response_json}), 200
+            return jsonify(new_insights), 200
 
         except json.JSONDecodeError:
             logging.error("Error parsing generated text as JSON.")
@@ -101,36 +91,30 @@ def generate_prompt(question, insights):
     Generates a structured prompt for OpenAI based on the user question and provided insights.
     """
     prompt = f"""
-     You are an AI that analyzes user questions and existing insights to generate new insights. 
-    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', 'Source_Insights', and 'Relation_To_Question', with each insight structured as follows and based on the provided input:
-    
-      - Summary: Insight summary here
-      - Description: Detailed insight description here
-      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
-      - Relation_to_question : How it relates to question
-
-      - Summary: Insight summary here
-      - Description: Detailed insight description here
-      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight
-      - Relation_to_question : How it relates to question
-      
+    You are an AI that analyzes user questions and existing insights to generate new insights. 
+    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', and 'Description'.
 
     Question: "{question}"
 
     Existing Insights:
     {json.dumps(insights, indent=2)}
 
-    Instructions:
+    - Follow this syntax for the generated insights:
+      "Insights":[
+        {
+          "Summary": "<Summary of the insight>",
+          "Description": "<Detailed description of the insight>",
+          "Source_Insights": <List of IDs from the existing insights that are relevant to this new insight>
+        },
+        ...
+      ]
     - Analyze the content of the provided question and insights.
     - Use the insights to create new insights relevant to the question.
     - Each new insight must include:
+      - ID: The ID of the original insight.
       - Summary: A short summary (max 200 characters).
       - Description: A detailed description (max 1500 characters).
-      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight.
-    - If the insights are related to multiple existing insights, mention how they work together to answer the user's question.
-    - The insights should be structured in such a way that they are answering the user's query directly and clearly.
-    - Ensure the response contains only one top-level 'Insights' field, which directly lists all generated insights inside it as an array.
-    - If no relevant insights can be generated, you should inform the user that no new insights were found.
+    - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}
     """
     return prompt
 
