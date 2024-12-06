@@ -91,8 +91,8 @@ def generate_prompt(question, insights):
     Generates a structured prompt for OpenAI based on the user question and provided insights.
     """
     prompt = f"""
-    You are an AI that analyzes user questions and existing insights to generate new insights. 
-    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', and 'Description'.
+     You are an AI that analyzes user questions and existing insights to generate new insights. 
+    Based on the following user question and insights, generate new insights in JSON format with the fields 'ID', 'Summary', 'Description', 'Source_Insights', and 'Relation_To_Question'.
 
     Question: "{question}"
 
@@ -103,10 +103,12 @@ def generate_prompt(question, insights):
     - Analyze the content of the provided question and insights.
     - Use the insights to create new insights relevant to the question.
     - Each new insight must include:
-      - ID: The ID of the original insight.
       - Summary: A short summary (max 200 characters).
       - Description: A detailed description (max 1500 characters).
-    - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}
+      - Source_Insights: List of IDs of the existing insights that were used to generate this new insight.
+    - If the insights are related to multiple existing insights, mention how they work together to answer the user's question.
+    - The insights should be structured in such a way that they are answering the user's query directly and clearly. 
+    - If no relevant insights can be generated, you should inform the user that no new insights were found.
     """
     return prompt
 
