@@ -115,7 +115,8 @@ def generate_prompt(question, insights):
       - Summary: A short summary (max 200 characters).
       - Description: A detailed description (max 1500 characters).
       - Source_Insights: A list of IDs from the existing insights that are used to derive the new insight (can be empty if not applicable).
-    - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}
+    - If no relevant insights can be generated, respond with: {{"message": "There is no insight found. Please send a different prompt."}}.
+    - If a specific number is mentioned in the question, that exact number of insights should be generated; otherwise, generate insights as appropriate.
     """
     return prompt
 
