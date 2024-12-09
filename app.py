@@ -30,57 +30,34 @@ def generate_insights():
     """
     Endpoint to generate new insights based on a user-provided question and existing insights.
     """
-    logging.debug("Starting generate_insights function.")
-
     # Parse request data
     try:
         data = request.get_json()
         question = data.get("question")
         insights = data.get("insights")
-        
         if not question or not insights:
-            logging.error("Missing required fields: 'question' and 'insights'.")
             return jsonify({"message": "Missing 'question' or 'insights' in the request body."}), 400
-
-        logging.debug(f"Received question: {question}")
-        logging.debug(f"Received insights: {insights}")
-
     except Exception as e:
-        logging.error(f"Error parsing request data: {e}")
         return jsonify({"message": "Invalid request format. Ensure the JSON is structured correctly."}), 400
-
     # Prepare prompt for OpenAI
     formatted_prompt = generate_prompt(question, insights)
-    logging.debug(f"Formatted prompt: {formatted_prompt}")
-
     try:
         # Initialize OpenAI model
         selected_model = 'gpt-3.5-turbo'  # Example model, adjust as needed
         llm = ChatOpenAI(model=selected_model, api_key=OPENAI_API_KEY)
         response = llm(formatted_prompt)
-        logging.debug(f"Raw model response: {response}")
-
         # Access the generated content properly
         response_text = response.content.strip()  # This should be the correct attribute
-        logging.debug(f"Generated text: {response_text}")
-
         # Parse the response text as JSON
         try:
             response_json = json.loads(response_text)
             new_insights = response_json.get('Insights', [])
-
             if not new_insights:
-                logging.info("No relevant insights found.")
                 return jsonify({"message": "There is no insight found. Please send a different prompt."}), 200
-
             return jsonify(new_insights), 200
-
         except json.JSONDecodeError:
-            logging.error("Error parsing generated text as JSON.")
             return jsonify({"message": "Error parsing response as JSON."}), 500
-
     except Exception as e:
-        logging.error(f"Error processing the prompt: {e}")
         if "insufficient_quota" in str(e):
             return jsonify({"message": "Quota exceeded. Please check your OpenAI plan and billing details."}), 429
         return jsonify({"message": "Error processing the prompt."}), 500
